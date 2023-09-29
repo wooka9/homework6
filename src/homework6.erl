@@ -57,6 +57,6 @@ process_loop(State = #state{handler = Mod, handler_state = HandlerState}) ->
     end.
 
 %%process_cleanup(State = #state{handler = Mod, handler_state = HandlerState}) ->
-process_cleanup() ->
-    timer:sleep(60000),
-    call(self(), {cleanup}).
+%process_cleanup() ->
+%    timer:sleep(60000),
+%    call(self(), {cleanup}).
