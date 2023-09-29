@@ -7,7 +7,7 @@
 -export([process_init/1]).
 -export([call/2]).
 -export([cast/2]).
-
+-export([process_cleanup/0]).
 -record(state, {
     handler,
     handler_state
@@ -21,6 +21,7 @@
 start(Module) ->
     ok = io:format("Starting Module: ~p~n", [Module]),
     State = #state{handler = Module},
+%    spawn(?MODULE, process_cleanup),
     spawn(?MODULE, process_init, [State]).
 
 stop(Pid) ->
@@ -54,3 +55,8 @@ process_loop(State = #state{handler = Mod, handler_state = HandlerState}) ->
         stop ->
             ok
     end.
+
+%%process_cleanup(State = #state{handler = Mod, handler_state = HandlerState}) ->
+process_cleanup() ->
+    timer:sleep(60000),
+    call(self(), {cleanup}).

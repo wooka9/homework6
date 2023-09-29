@@ -6,15 +6,11 @@
 -export([init/0]).
 -export([handle_call/2]).
 -export([handle_cast/2]).
-
-%table_cleanup() ->
-%    timer:sleep(60000),
-%    my_cache:delete_obsolete(table),
-%    table_cleanup().
+-export([cleanup/0]).
 
 init() ->
     my_cache:create(table),
-%    spawn(homework6_handler, table_cleanup, []),
+    spawn(?MODULE, cleanup, []),
     {ok, undefined}.
 
 handle_call(ping, State) ->
@@ -37,6 +33,10 @@ handle_call(_, State) ->
     ok = io:format("~p received wrong_message~n", [self()]),
     {ok, wrong_message, State}.
 
-
 handle_cast(_Msg, State) ->
     {ok, State}.
+
+cleanup() ->
+    timer:sleep(60000),
+    my_cache:delete_obsolete(table),
+    cleanup().
