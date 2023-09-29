@@ -7,15 +7,14 @@
 -export([handle_call/2]).
 -export([handle_cast/2]).
 
-%cleanup() ->
+%table_cleanup() ->
 %    timer:sleep(60000),
-%    delete_obsolete(table).
+%    my_cache:delete_obsolete(table),
+%    table_cleanup().
 
 init() ->
     my_cache:create(table),
-%    handle_cleanup().
-%    spawn(?MODULE, handle_cleanup, []).
-%,
+%    spawn(homework6_handler, table_cleanup, []),
     {ok, undefined}.
 
 handle_call(ping, State) ->
