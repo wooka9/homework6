@@ -1,4 +1,0 @@
-Pid = homework6:start(homework6_handler).
-homework6:call(Pid, ping).
-homework6:call(Pid, {insert, key1, "value1"}).
-homework6:call(Pid, {lookup, key1}).
