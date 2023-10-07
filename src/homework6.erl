@@ -1,62 +1,68 @@
 -module(homework6).
--import(my_cache, [create/1, insert/3, insert/4, lookup/2, delete_obsolete/1]).
+
+-behaviour(gen_server).
+
+-export([start_link/0]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([create/1, insert/3, insert/4, lookup/2]).
+
+-define(SERVER, ?MODULE).
+
+-import(homework6_cache, [cache_create/1, cache_insert/3, cache_insert/4, cache_lookup/2, delete_obsolete/1]).
 
 %% API
--export([start/1]).
--export([stop/1]).
--export([process_init/1]).
--export([call/2]).
--export([cast/2]).
--export([process_cleanup/0]).
--record(state, {
-    handler,
-    handler_state
-}).
+start_link() ->
+	gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
--callback init() -> {ok, tuple()}.
--callback handle_call(any(), tuple()) -> {ok, any(), tuple()}.
--callback handle_cast(any(), tuple()) -> {ok, tuple()}.
+%% callback
+create(TableName) ->
+	gen_server:call(?MODULE, {create, TableName}).
 
-%% API
-start(Module) ->
-    ok = io:format("Starting Module: ~p~n", [Module]),
-    State = #state{handler = Module},
-%    spawn(?MODULE, process_cleanup),
-    spawn(?MODULE, process_init, [State]).
+insert(TableName, Key, Value) ->
+	gen_server:call(?MODULE, {insert, TableName, Key, Value}).
 
-stop(Pid) ->
-    Pid ! stop.
+insert(TableName, Key, Value, Expire) ->
+	gen_server:call(?MODULE, {insert, TableName, Key, Value, Expire}).
 
-call(Name, Msg) ->
-    _ = Name ! {call, self(), Msg},
-    receive
-        {result, Res} ->
-            Res
-    end.
+lookup(TableName, Key) ->
+	gen_server:call(?MODULE, {lookup, TableName, Key}).
 
-cast(Name, Msg) ->
-    _ = Name ! {cast, Msg},
-    ok.
+init([]) ->
+	{ok, []}.
 
-process_init(State = #state{handler = Mod}) ->
-    {ok, HandlerState} = Mod:init(),
-    process_loop(State#state{handler_state = HandlerState}).
+handle_call({create, TableName}, _From, State) ->
+	Result = homework6_cache:cache_create(TableName),
+	erlang:send_after(60000, self(), {cleanup, TableName}),
+	{reply, Result, State};
+handle_call({insert, TableName, Key, Value}, _From, State) ->
+	Result = homework6_cache:cache_insert(TableName, Key, Value),
+	{reply, Result, State};
+handle_call({insert, TableName, Key, Value, Expire}, _From,  State) ->
+	Result = homework6_cache:cache_insert(TableName, Key, Value, Expire),
+	{reply, Result, State};
+handle_call({lookup, TableName, Key}, _From, State) ->
+	Result = homework6_cache:cache_lookup(TableName, Key),
+	{reply, Result, State};
+handle_call({cleanup, TableName}, _From, State) ->
+	Result = homework6_cache:delete_obsolete(TableName),
+	{reply, Result, State};
+handle_call(_, _From, State) ->
+	{reply, wrong_message, State}.
 
-%% internal
-process_loop(State = #state{handler = Mod, handler_state = HandlerState}) ->
-    receive
-        {call, From, Msg} ->
-            {ok, Result, HandlerState2} = Mod:handle_call(Msg, HandlerState),
-            _ = From ! {result, Result},
-            process_loop(State#state{handler_state = HandlerState2});
-        {cast, Msg} ->
-            {ok, HandlerState2} = Mod:handle_cast(Msg, HandlerState),
-            process_loop(State#state{handler_state = HandlerState2});
-        stop ->
-            ok
-    end.
+handle_cast(_Msg, State) ->
+	{noreply, State}.
 
-%%process_cleanup(State = #state{handler = Mod, handler_state = HandlerState}) ->
-%process_cleanup() ->
-%    timer:sleep(60000),
-%    call(self(), {cleanup}).
+handle_info({cleanup, TableName}, State) ->
+	homework6_cache:delete_obsolete(TableName),
+	erlang:send_after(60000, self(), {cleanup, TableName}),
+	{noreply, State};
+handle_info(_Info, State) ->
+	{noreply, State}.
+
+terminate(_, _) ->
+    {shutdown,ok}.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+%% -record(state, {table}).

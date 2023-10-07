@@ -1,20 +1,20 @@
--module(my_cache).
--export([create/1, insert/3, insert/4, lookup/2, delete_obsolete/1]).
+-module(homework6_cache).
+-export([cache_create/1, cache_insert/3, cache_insert/4, cache_lookup/2, delete_obsolete/1]).
 
-create(TableName) ->
+cache_create(TableName) ->
 	ets:new(TableName, [named_table, public]),
 	ok.
 
-insert(TableName, Key, Value) ->
+cache_insert(TableName, Key, Value) ->
 	ets:insert(TableName, {Key, Value}),
 	ok.
 
-insert(TableName, Key, Value, Expire) ->
+cache_insert(TableName, Key, Value, Expire) ->
 	ExpireTime = erlang:system_time(seconds) + Expire,
 	ets:insert(TableName, {Key, Value, ExpireTime}),
 	ok.
 
-lookup(TableName, Key) ->
+cache_lookup(TableName, Key) ->
 	TimeNow = erlang:system_time(seconds),
 	case ets:lookup(TableName, Key) of
 		[{Key, Value}] ->
@@ -26,5 +26,6 @@ lookup(TableName, Key) ->
 
 delete_obsolete(TableName) ->
 	TimeNow = erlang:system_time(seconds),
-	ets:select_delete(TableName, [ { {'$1', '$2', '$3'}, [{'<', '$3', TimeNow}], [true] } ] ),
+	MatchSpec = ets:fun2ms(fun({_, _, Expire}) when Expire < TimeNow -> true end),
+	ets:select_delete(TableName, MatchSpec),
 	ok.
