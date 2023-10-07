@@ -26,6 +26,5 @@ cache_lookup(TableName, Key) ->
 
 delete_obsolete(TableName) ->
 	TimeNow = erlang:system_time(seconds),
-	MatchSpec = ets:fun2ms(fun({_, _, Expire}) when Expire < TimeNow -> true end),
-	ets:select_delete(TableName, MatchSpec),
+	ets:select_delete(TableName, [ { {'$1', '$2', '$3'}, [{'<', '$3', TimeNow}], [true] } ]),
 	ok.
